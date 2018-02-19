@@ -4,20 +4,19 @@
 
 Simple plugin that adds a `nodeexporter` entry to the Dokku's menu to start/stop the service.
 
-Note that the container needs to run in privileged modes. Host volumes are mounted read-only.
+Note that the container needs to run in privilege modes. Host volumes are mounted read-only.
 
 ## Installation
 
 On the Dokku server run the following:
 ```
-sudo dokku plugin:install https://github.com/openapi-ro/dokku-nodeexporter
+sudo dokku plugin:install https://github.com/mtarnovan/dokku-nodeexporter nodeexporter
 ```
 
 ## Usage
 
 ```
-Options:
-dokku nodeexporter, Show the status of nodeexporter
-dokku nodeexporter:start, Starts nodeexporter
-dokku nodeexporter:stop, Stop nodeexporter
+dokku nodeexporter # Show the status of nodeexporter
+dokku nodeexporter:start # Starts nodeexporter
+dokku nodeexporter:stop # Stop nodeexporter
 ```

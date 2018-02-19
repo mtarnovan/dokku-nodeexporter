@@ -30,8 +30,8 @@ f_dokku_nodeexporter_start() {
         --publish="$DOKKU_NODEEXPORTER_PORT:9100" \
         --detach=true \
         --name="$DOKKU_NODEEXPORTER_CONTAINER" \
-        "$DOKKU_NODEEXPORTER_IMAGE" \
-        "$DOKKU_NODEEXPORTER_ARGS" \
+        $DOKKU_NODEEXPORTER_IMAGE \
+        $DOKKU_NODEEXPORTER_ARGS \
         > /dev/null
       ;;
     false)
