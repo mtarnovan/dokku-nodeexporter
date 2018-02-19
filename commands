@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+
+DOKKU_NODEEXPORTER_IMAGE="prom/node-exporter:v0.15.2"
+DOKKU_NODEEXPORTER_CONTAINER=nodeexporter
+DOKKU_NODEEXPORTER_DEFAULT_PORT=9100
+DOKKU_NODEEXPORTER_PORT="${DOKKU_NODEEXPORTER_PORT:-$DOKKU_NODEEXPORTER_DEFAULT_PORT}"
+DOKKU_NODEEXPORTER_ARGS="--path.procfs=/host/proc --path.sysfs=/host/sys --collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)(\$\$|/)"
+
+f_check_container() {
+  local l_status
+
+  l_status="$(docker inspect -f '{{.State.Running}}' $DOKKU_NODEEXPORTER_CONTAINER 2>/dev/null)" || l_status=none
+  printf "%s" "$l_status"
+}
+
+# Start the container
+f_dokku_nodeexporter_start() {
+  case $(f_check_container) in
+    none)
+      echo "Starting nodeexporter on port ${DOKKU_NODEEXPORTER_PORT} ..."
+      docker run \
+        --user root \
+        --privileged \
+        --volume=/proc:/host/proc:ro \
+        --volume=/sys:/host/sys:ro \
+        --volume=/:/rootfs:ro \
+        --publish="$DOKKU_NODEEXPORTER_PORT:9100" \
+        --detach=true \
+        --name="$DOKKU_NODEEXPORTER_CONTAINER" \
+        "$DOKKU_NODEEXPORTER_IMAGE" \
+        "$DOKKU_NODEEXPORTER_ARGS" \
+        > /dev/null
+      ;;
+    false)
+      echo "Starting nodeexporter on port ${DOKKU_NODEEXPORTER_PORT} ..."
+      docker start "$DOKKU_NODEEXPORTER_CONTAINER" >/dev/null
+      ;;
+    *)
+      echo "nodeexporter is already running"
+      ;;
+  esac
+}
+
+
+# Stop the container
+f_dokku_nodeexporter_stop() {
+  case $(f_check_container) in
+    true)
+      echo "Stopping nodeexporter ..."
+      docker stop "$DOKKU_NODEEXPORTER_CONTAINER" >/dev/null
+      ;;
+    *)
+      echo "nodeexporter is not running"
+      ;;
+  esac
+}
+
+# Pull nodeexporter image
+f_dokku_nodeexporter_install() {
+  docker pull "$DOKKU_NODEEXPORTER_IMAGE" >/dev/null
+  case $(f_check_container) in
+    true)
+      f_dokku_nodeexporter_start
+      docker rm "$DOKKU_NODEEXPORTER_CONTAINER" >/dev/null
+      f_dokku_nodeexporter_stop
+      ;;
+    false)
+      docker rm "$DOKKU_NODEEXPORTER_CONTAINER" >/dev/null
+      ;;
+    *) ;;
+  esac
+}
+
+case "$1" in
+  nodeexporter)
+    case $(f_check_container) in
+      true)
+        echo "nodeexporter is running on http://$(hostname -f):${DOKKU_NODEEXPORTER_PORT}/" ;;
+      *)
+        echo "nodeexporter is not running" ;;
+    esac ;;
+
+  nodeexporter:start)
+    f_dokku_nodeexporter_start ;;
+
+  nodeexporter:stop)
+    f_dokku_nodeexporter_stop ;;
+
+  nodeexporter:install)
+    f_dokku_nodeexporter_install ;;
+
+  help | nodeexporter:help)
+    cat<<EOF
+    nodeexporter, Show the status of nodeexporter
+    nodeexporter:start, Start nodeexporter service
+    nodeexporter:stop, Stop nodeexporter
+EOF
+    ;;
+
+  *)
+    exit "$DOKKU_NOT_IMPLEMENTED_EXIT"
+    ;;
+esac
+
